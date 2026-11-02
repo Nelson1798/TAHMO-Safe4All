@@ -1,0 +1,6 @@
+.safe4all-cache/
+__pycache__/
+*.pyc
+.env
+*credentials*.json
+tahmo_config.json
