@@ -1,0 +1,21 @@
+name: safe4all-climate-risk
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - jupyterlab
+  - ipykernel
+  - ipywidgets
+  - geemap
+  - earthengine-api
+  - pandas
+  - numpy
+  - matplotlib
+  - geopandas
+  - folium
+  - mapclassify
+  - pillow
+  - requests
+  - xarray
+  - netcdf4
+  - pip
