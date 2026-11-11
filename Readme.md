@@ -96,21 +96,30 @@ workshop project; point it at a different project (with the Earth Engine API
 enabled — free to create at <https://console.cloud.google.com/>) if you want
 to run this against your own instead.
 
-Two ways to authenticate:
+Authentication (tried in this order):
 
-- **Interactive (default):** the notebook prompts you to sign in with
-  `ee.Authenticate()` on first use. Good for individual Google accounts.
-- **Service account (headless, recommended for the workshop):** set the
-  `EE_SERVICE_ACCOUNT_KEY` (or the standard `GOOGLE_APPLICATION_CREDENTIALS`)
-  environment variable to the local path of a service-account JSON key
-  *before* starting Jupyter/Colab, so every participant can run "Run all"
-  without an individual OAuth login.
+- **Shared Drive service-account key (default, recommended for the workshop):**
+  the notebook reads `service-key.json` from the shared **`SAFE4ALL-workshop`**
+  Google Drive folder, so every participant can "Run all" without an
+  individual OAuth login. In Colab the notebook mounts your Drive and finds the
+  folder whether it is a Shared Drive or a folder shared with you. If it was
+  only shared with you, add it to your Drive first: *Shared with me ->
+  right-click `SAFE4ALL-workshop` -> Organize -> Add shortcut -> My Drive*.
+  Locally, Google Drive for Desktop must be syncing that folder. The service
+  account needs Earth Engine access on `EE_PROJECT`.
+- **Explicit key file:** set `EE_SERVICE_ACCOUNT_KEY` in Section 1 (or the
+  `EE_SERVICE_ACCOUNT_KEY` / `GOOGLE_APPLICATION_CREDENTIALS` environment
+  variable) to the local path of a service-account JSON key. This takes
+  priority over the Shared Drive key.
+- **Interactive:** if no key is found, the notebook prompts you to sign in
+  with `ee.Authenticate()`.
 
-  **Never commit a key file to this repository.** Keep it outside the
-  project folder, or inside `.safe4all-cache/` (already git-ignored). If a
-  key is ever pasted into a chat, ticket, or shared document, treat it as
-  compromised and rotate it immediately in
-  [IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts).
+**Never commit a key file to this repository.** Keep it in the shared Drive
+folder, outside the project folder, or inside `.safe4all-cache/` (already
+git-ignored). If a key is ever pasted into a chat, ticket, or shared document,
+treat it as compromised and rotate it immediately in
+[IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts),
+then replace `service-key.json` in the `SAFE4ALL-workshop` folder.
 
 The project does not store credentials or API keys in code — TAHMO
 credentials are requested privately at runtime with `getpass` and kept only

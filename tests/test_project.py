@@ -64,6 +64,35 @@ class ProjectTests(unittest.TestCase):
             fake_ee.ServiceAccountCredentials.return_value, project="some-project"
         )
 
+    def test_earth_engine_uses_the_shared_drive_key_by_default(self):
+        # Default workshop path: with no explicit key, service-key.json from the
+        # shared SAFE4ALL-workshop Drive folder (a temp folder here) is used.
+        fake_ee = mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            key_path = Path(tmp_dir) / "service-key.json"
+            key_path.write_text(json.dumps({"client_email": "workshop@example.iam.gserviceaccount.com"}))
+            env = {"EE_PROJECT": "safe4all-514410", "SAFE4ALL_SA_KEY_DIR": tmp_dir}
+            with mock.patch.dict(os.environ, env, clear=True), mock.patch.dict(sys.modules, {"ee": fake_ee}):
+                initialise_earth_engine()
+
+        fake_ee.ServiceAccountCredentials.assert_called_once_with(
+            "workshop@example.iam.gserviceaccount.com", str(key_path)
+        )
+        fake_ee.Authenticate.assert_not_called()
+        fake_ee.Initialize.assert_called_once_with(
+            fake_ee.ServiceAccountCredentials.return_value, project="safe4all-514410"
+        )
+
+    def test_earth_engine_falls_back_to_interactive_without_shared_key(self):
+        fake_ee = mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            env = {"EE_PROJECT": "safe4all-514410", "SAFE4ALL_SA_KEY_DIR": tmp_dir}
+            with mock.patch.dict(os.environ, env, clear=True), mock.patch.dict(sys.modules, {"ee": fake_ee}):
+                initialise_earth_engine()
+
+        fake_ee.ServiceAccountCredentials.assert_not_called()
+        fake_ee.Initialize.assert_called_once_with(project="safe4all-514410")
+
     def test_earth_engine_service_account_key_must_exist(self):
         env = {"EE_PROJECT": "some-project", "EE_SERVICE_ACCOUNT_KEY": "/no/such/key.json"}
         with mock.patch.dict(os.environ, env, clear=True), mock.patch.dict(sys.modules, {"ee": mock.MagicMock()}):
