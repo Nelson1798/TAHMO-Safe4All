@@ -90,31 +90,34 @@ Jupyter/Anaconda use `.safe4all-cache/` inside the project folder.
 
 ## Google Earth Engine access
 
-Earth Engine now requires every request to be attached to a Google Cloud
-project. `EE_PROJECT` in Section 1 of the notebook is pre-set to the SAFE4ALL
-workshop project; point it at a different project (with the Earth Engine API
-enabled — free to create at <https://console.cloud.google.com/>) if you want
-to run this against your own instead.
+Earth Engine requires every request to be attached to a Google Cloud project.
+You do **not** need your own project for the workshop: by default the notebook
+signs in with the shared SAFE4ALL / TAHMO workshop **service account**, the same
+account the other TAHMO/NOAA workshop notebooks use. This avoids the
+`PERMISSION_DENIED` / "Caller does not have required permission to use project"
+error that appears when each participant authenticates with a personal Google
+account that has no access to the workshop project.
 
-Two ways to authenticate:
+`EE_AUTH` in Section 1 selects the mode:
 
-- **Interactive (default):** the notebook prompts you to sign in with
-  `ee.Authenticate()` on first use. Good for individual Google accounts.
-- **Service account (headless, recommended for the workshop):** set the
-  `EE_SERVICE_ACCOUNT_KEY` (or the standard `GOOGLE_APPLICATION_CREDENTIALS`)
-  environment variable to the local path of a service-account JSON key
-  *before* starting Jupyter/Colab, so every participant can run "Run all"
-  without an individual OAuth login.
+- **`'shared'` (default):** the shared workshop service account is used. Its key
+  is downloaded at run time from Google Drive (via `gdown`), so **no credential
+  is stored in this repository**. Nothing else to configure — just Run all.
+- **`'personal'`:** sign in with your own Google account. Set `EE_PROJECT` to a
+  Cloud project where you have enabled the Earth Engine API (free to create at
+  <https://console.cloud.google.com/>); the notebook then uses the normal
+  `ee.Authenticate()` prompt.
 
-  **Never commit a key file to this repository.** Keep it outside the
-  project folder, or inside `.safe4all-cache/` (already git-ignored). If a
-  key is ever pasted into a chat, ticket, or shared document, treat it as
-  compromised and rotate it immediately in
-  [IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts).
+Advanced override: set `EE_SERVICE_ACCOUNT_KEY` (or the standard
+`GOOGLE_APPLICATION_CREDENTIALS`) to the local path of your own service-account
+JSON key. **Never commit a key file to this repository** — keep it outside the
+project folder, or inside `.safe4all-cache/` (already git-ignored). If the shared
+key is ever misused, rotate it in
+[IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
+and update the Drive key file; only `safe4all/gee.py` references it.
 
-The project does not store credentials or API keys in code — TAHMO
-credentials are requested privately at runtime with `getpass` and kept only
-in the current session's memory.
+TAHMO API credentials are still requested privately at run time with `getpass`
+and kept only in the current session's memory.
 
 ## Interpretation note
 
