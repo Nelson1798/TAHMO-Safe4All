@@ -115,52 +115,6 @@ class ProjectTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "TAHMO_API_SECRET"):
                     load_shared_credentials()
 
-    def test_workshop_files_are_downloaded_by_drive_file_id(self):
-        # With a file ID set, the secret file is downloaded with gdown (no Drive
-        # mount or folder access needed) and used to sign in to Earth Engine.
-        from safe4all.tahmo_credentials import load_shared_credentials
-
-        fake_ee, fake_gdown = mock.MagicMock(), mock.MagicMock()
-        contents = {
-            "key-id": json.dumps({"client_email": "workshop@example.iam.gserviceaccount.com"}),
-            "tahmo-id": "TAHMO_API_KEY=abc\nTAHMO_API_SECRET=xyz\n",
-        }
-
-        def download(url, output, quiet):
-            Path(output).write_text(contents[url.split("id=")[1]])
-
-        fake_gdown.download.side_effect = download
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            env = {
-                "EE_PROJECT": "safe4all-514410",
-                "SAFE4ALL_SERVICE_KEY_FILE_ID": "key-id",
-                "SAFE4ALL_TAHMO_CREDENTIALS_FILE_ID": "tahmo-id",
-                "TMPDIR": tmp_dir,
-            }
-            with mock.patch.dict(os.environ, env, clear=True), \
-                    mock.patch.dict(sys.modules, {"ee": fake_ee, "gdown": fake_gdown}), \
-                    mock.patch("tempfile.tempdir", tmp_dir):
-                initialise_earth_engine()
-                self.assertTrue(load_shared_credentials())
-                self.assertEqual((os.environ["TAHMO_API_KEY"], os.environ["TAHMO_API_SECRET"]), ("abc", "xyz"))
-
-        key_path = fake_ee.ServiceAccountCredentials.call_args.args[1]
-        self.assertTrue(key_path.endswith("service-key.json"))
-        fake_ee.Initialize.assert_called_once_with(
-            fake_ee.ServiceAccountCredentials.return_value, project="safe4all-514410"
-        )
-
-    def test_workshop_file_download_failure_is_clear(self):
-        from safe4all.shared_drive import get_workshop_file
-
-        fake_gdown = mock.MagicMock()
-        fake_gdown.download.return_value = None  # private file: nothing written
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            with mock.patch.dict(os.environ, {"SAFE4ALL_SERVICE_KEY_FILE_ID": "private"}, clear=True), \
-                    mock.patch.dict(sys.modules, {"gdown": fake_gdown}), mock.patch("tempfile.tempdir", tmp_dir):
-                with self.assertRaisesRegex(RuntimeError, "Anyone with the link"):
-                    get_workshop_file("service-key.json", "SAFE4ALL_SERVICE_KEY_FILE_ID")
-
     def test_earth_engine_service_account_key_must_exist(self):
         env = {"EE_PROJECT": "some-project", "EE_SERVICE_ACCOUNT_KEY": "/no/such/key.json"}
         with mock.patch.dict(os.environ, env, clear=True), mock.patch.dict(sys.modules, {"ee": mock.MagicMock()}):

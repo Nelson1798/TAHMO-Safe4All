@@ -98,67 +98,48 @@ to run this against your own instead.
 
 Authentication (tried in this order):
 
+- **Shared Drive service-account key (default, recommended for the workshop):**
+  the notebook reads `service-key.json` from the shared **`SAFE4ALL-workshop`**
+  Google Drive folder, so every participant can "Run all" without an
+  individual OAuth login. In Colab the notebook mounts your Drive and finds the
+  folder whether it is a Shared Drive or a folder shared with you. If it was
+  only shared with you, add it to your Drive first: *Shared with me ->
+  right-click `SAFE4ALL-workshop` -> Organize -> Add shortcut -> My Drive*.
+  Locally, Google Drive for Desktop must be syncing that folder. The service
+  account needs Earth Engine access on `EE_PROJECT`.
 - **Explicit key file:** set `EE_SERVICE_ACCOUNT_KEY` in Section 1 (or the
   `EE_SERVICE_ACCOUNT_KEY` / `GOOGLE_APPLICATION_CREDENTIALS` environment
-  variable) to the local path of a service-account JSON key.
-- **Workshop key (default):** `service-key.json`, downloaded by its Drive file
-  ID (`SERVICE_KEY_FILE_ID`) or found in the shared `SAFE4ALL-workshop` Drive
-  folder. See *Workshop secrets* below. The service account needs Earth Engine
-  access on `EE_PROJECT`.
+  variable) to the local path of a service-account JSON key. This takes
+  priority over the Shared Drive key.
 - **Interactive:** if no key is found, the notebook prompts you to sign in
   with `ee.Authenticate()`.
 
-## Workshop secrets (Earth Engine key and TAHMO credentials)
+**Never commit a key file to this repository.** Keep it in the shared Drive
+folder, outside the project folder, or inside `.safe4all-cache/` (already
+git-ignored). If a key is ever pasted into a chat, ticket, or shared document,
+treat it as compromised and rotate it immediately in
+[IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts),
+then replace `service-key.json` in the `SAFE4ALL-workshop` folder.
 
-Two files hold the workshop secrets:
+## TAHMO API credentials
 
-- `service-key.json`: the Earth Engine service-account key.
-- `tahmo-credentials.txt`: the TAHMO API key and secret, as two lines:
+The notebook reads the TAHMO API key and secret from **`tahmo-credentials.txt`**
+in the same shared `SAFE4ALL-workshop` Google Drive folder, so participants are
+not asked to type them. Create the file with exactly these two lines:
 
-  ```text
-  TAHMO_API_KEY=your-api-key
-  TAHMO_API_SECRET=your-api-secret
-  ```
+```text
+TAHMO_API_KEY=your-api-key
+TAHMO_API_SECRET=your-api-secret
+```
 
-  Blank lines and `#` comments are ignored. If `TAHMO_API_KEY` and
-  `TAHMO_API_SECRET` are already set as environment variables, they are used
-  instead. Without credentials, TAHMO is skipped and the risk assessment still
-  runs. `USE_TAHMO = False` turns TAHMO off.
+Blank lines and `#` comments are ignored. If `TAHMO_API_KEY` and
+`TAHMO_API_SECRET` are already set as environment variables, they are used
+instead. If neither is available, TAHMO is skipped and the risk assessment still
+runs.
 
-### One link for participants (recommended)
-
-Participants only need the Colab link; they do not need access to any Drive
-folder.
-
-1. Upload both files to Google Drive and share each as **Anyone with the link
-   -> Viewer**. Copy each file ID (the part of the share link between `/d/` and
-   `/view`).
-2. Save a copy of the notebook to your Drive (*File -> Save a copy in Drive*).
-   In that copy only, set `SERVICE_KEY_FILE_ID` and `TAHMO_CREDENTIALS_FILE_ID`
-   in Section 1.
-3. Share that notebook copy as **Anyone with the link -> Viewer** and give its
-   Colab link to participants. They open it and choose *Run all*; the code is
-   still pulled from GitHub, and the secret files are downloaded with `gdown`.
-4. After the workshop, delete the service-account key in
-   [IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts),
-   rotate or delete the TAHMO credentials, and delete or restrict both files.
-
-Anyone with the notebook link can obtain the secrets, so use a service account
-limited to Earth Engine on the workshop project, a dedicated TAHMO workshop
-account, and destroy both after the workshop.
-
-### Alternative: shared Drive folder
-
-If the file IDs are left as `None`, the notebook looks for both files in the
-shared **`SAFE4ALL-workshop`** Google Drive folder (`SHARED_DRIVE_NAME`). In
-Colab it mounts your Drive and finds the folder whether it is a Shared Drive or
-a folder shared with you; if it was only shared with you, add it to your Drive
-first (*Shared with me -> right-click it -> Organize -> Add shortcut -> My
-Drive*).
-
-**Never commit `service-key.json`, `tahmo-credentials.txt` or their file IDs to
-this repository.** Google automatically disables service-account keys found in
-public repositories.
+The project does not store credentials or API keys in code. Never commit
+`tahmo-credentials.txt` or `service-key.json` to this repository, and share the
+Drive folder only with workshop participants.
 
 ## Interpretation note
 
