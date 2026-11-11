@@ -36,13 +36,46 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(metrics['n'], 3.0)
         self.assertGreater(metrics['rmse_mm'], 0)
 
-    def test_earth_engine_requires_a_project(self):
-        # Earth Engine has required every request to name a Cloud project
-        # since November 2024; fail fast with a clear message instead of a
-        # cryptic error from the `ee` library.
-        with mock.patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(RuntimeError, "EE_PROJECT"):
+    def test_earth_engine_requires_a_project_for_interactive_signin(self):
+        # When no key can be obtained (shared download disabled here via gdown=None,
+        # no shared folder) the notebook would sign in interactively, which needs a
+        # project; fail fast with a clear message instead of a cryptic ee error.
+        with tempfile.TemporaryDirectory() as empty_dir:
+            env = {"SAFE4ALL_SA_KEY_DIR": empty_dir}  # empty folder -> no shared key found
+            with mock.patch.dict(os.environ, env, clear=True), \
+                    mock.patch.dict(sys.modules, {"gdown": None}):
+                with self.assertRaisesRegex(RuntimeError, "EE_PROJECT"):
+                    initialise_earth_engine()
+
+    def test_earth_engine_downloads_shared_key_by_default(self):
+        # Default zero-friction path (same as TAHMO/NOAA): the shared service-account
+        # key is downloaded from its Drive file link and Earth Engine is initialised
+        # with the key's own project, even when EE_PROJECT names a different one.
+        fake_ee = mock.MagicMock()
+        fake_gdown = mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cache = Path(tmp_dir) / "downloaded_key.json"
+
+            def _fake_download(url, out, quiet=True):
+                Path(out).write_text(json.dumps({
+                    "client_email": "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com",
+                    "project_id": "natural-notch-435413-j3",
+                }))
+
+            fake_gdown.download.side_effect = _fake_download
+            env = {"EE_PROJECT": "safe4all-514410", "SAFE4ALL_SA_KEY_CACHE": str(cache)}
+            with mock.patch.dict(os.environ, env, clear=True), \
+                    mock.patch.dict(sys.modules, {"ee": fake_ee, "gdown": fake_gdown}):
                 initialise_earth_engine()
+
+        fake_gdown.download.assert_called_once()
+        fake_ee.ServiceAccountCredentials.assert_called_once_with(
+            "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com", str(cache)
+        )
+        fake_ee.Authenticate.assert_not_called()
+        fake_ee.Initialize.assert_called_once_with(
+            fake_ee.ServiceAccountCredentials.return_value, project="natural-notch-435413-j3"
+        )
 
     def test_earth_engine_uses_a_service_account_key_when_configured(self):
         # Headless/workshop auth path: a service account key file (never
