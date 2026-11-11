@@ -16,6 +16,7 @@ dependencies:
   - mapclassify
   - pillow
   - requests
+  - gdown
   - xarray
   - netcdf4
   - pip
