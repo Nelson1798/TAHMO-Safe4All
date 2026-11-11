@@ -90,40 +90,31 @@ Jupyter/Anaconda use `.safe4all-cache/` inside the project folder.
 
 ## Google Earth Engine access
 
-Earth Engine requires every request to be attached to a Google Cloud project.
-You do **not** need your own project for the workshop: by default the notebook
-signs in with the shared SAFE4ALL / TAHMO workshop **service account**, the same
-account the other TAHMO/NOAA workshop notebooks use. This avoids the
-`PERMISSION_DENIED` / "Caller does not have required permission to use project"
-error that appears when each participant authenticates with a personal Google
-account that has no access to the workshop project.
+Earth Engine now requires every request to be attached to a Google Cloud
+project. `EE_PROJECT` in Section 1 of the notebook is pre-set to the SAFE4ALL
+workshop project; point it at a different project (with the Earth Engine API
+enabled — free to create at <https://console.cloud.google.com/>) if you want
+to run this against your own instead.
 
-`EE_AUTH` in Section 1 selects the mode:
+Two ways to authenticate:
 
-- **`'shared'` (default):** the shared workshop service account is used. Its key
-  is read at run time from `service-key.json` in the shared **`SAFE4ALL-workshop`**
-  Google Drive folder, so **no credential is stored in this repository**. In
-  Colab the notebook mounts your Drive and finds the folder whether it is a
-  Shared Drive or a folder shared with you. If it was only shared with you, add
-  it to your Drive first: *Shared with me -> right-click `SAFE4ALL-workshop` ->
-  Organize -> Add shortcut -> My Drive*. Locally, Google Drive for Desktop must
-  be syncing that folder.
-- **`'personal'`:** sign in with your own Google account. Set `EE_PROJECT` to a
-  Cloud project where you have enabled the Earth Engine API (free to create at
-  <https://console.cloud.google.com/>); the notebook then uses the normal
-  `ee.Authenticate()` prompt.
+- **Interactive (default):** the notebook prompts you to sign in with
+  `ee.Authenticate()` on first use. Good for individual Google accounts.
+- **Service account (headless, recommended for the workshop):** set the
+  `EE_SERVICE_ACCOUNT_KEY` (or the standard `GOOGLE_APPLICATION_CREDENTIALS`)
+  environment variable to the local path of a service-account JSON key
+  *before* starting Jupyter/Colab, so every participant can run "Run all"
+  without an individual OAuth login.
 
-Advanced override: set `EE_SERVICE_ACCOUNT_KEY` (or the standard
-`GOOGLE_APPLICATION_CREDENTIALS`) to the local path of your own service-account
-JSON key. **Never commit a key file to this repository** — keep it outside the
-project folder, or inside `.safe4all-cache/` (already git-ignored). If the shared
-key is ever misused, rotate it in
-[IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
-and replace `service-key.json` in the `SAFE4ALL-workshop` folder; only
-`safe4all/gee.py` references it.
+  **Never commit a key file to this repository.** Keep it outside the
+  project folder, or inside `.safe4all-cache/` (already git-ignored). If a
+  key is ever pasted into a chat, ticket, or shared document, treat it as
+  compromised and rotate it immediately in
+  [IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts).
 
-TAHMO API credentials are still requested privately at run time with `getpass`
-and kept only in the current session's memory.
+The project does not store credentials or API keys in code — TAHMO
+credentials are requested privately at runtime with `getpass` and kept only
+in the current session's memory.
 
 ## Interpretation note
 
