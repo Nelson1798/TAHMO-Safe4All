@@ -9,7 +9,9 @@ personal account that had no access to the workshop project.
 
 The service-account key is **not stored in this repository**. It is read at run
 time from ``service-key.json`` in the shared ``SAFE4ALL-workshop`` Google Drive
-folder, so no credential is committed here.
+folder; if that folder is not shared with the user, the key is downloaded from
+its shared Drive file link instead (the same mechanism the TAHMO/NOAA notebooks
+use). Either way, no credential is committed here.
 """
 
 from __future__ import annotations
@@ -27,6 +29,10 @@ SHARED_EE_PROJECT = "natural-notch-435413-j3"
 SHARED_SA_EMAIL = "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com"
 SHARED_KEY_FOLDER = "SAFE4ALL-workshop"
 SHARED_KEY_FILENAME = "service-key.json"
+# Fallback: the same shared key file the TAHMO/NOAA workshop notebooks download
+# (a public "anyone with the link" Drive file). Used when the Shared Drive folder
+# above is not shared with the person running the notebook.
+SHARED_SA_KEY_DRIVE_ID = "181IKB3sJ3iUn6ZOZbg50htgH2JKcxFkT"
 
 
 def _shared_key_candidates() -> list[Path]:
@@ -69,26 +75,60 @@ def _mount_colab_drive() -> None:
         drive.mount("/content/drive", force_remount=False)
 
 
-def _shared_key_path() -> Path:
-    """Return the path of the shared workshop key in the SAFE4ALL-workshop folder."""
+def _locate_shared_key() -> Path | None:
+    """Return the shared key in the SAFE4ALL-workshop Drive folder, or None if absent."""
     if not os.environ.get("SAFE4ALL_SA_KEY_DIR"):
         _mount_colab_drive()
-    candidates = _shared_key_candidates()
-    for candidate in candidates:
+    for candidate in _shared_key_candidates():
         if candidate.is_file() and candidate.stat().st_size > 0:
             return candidate
-    folder = os.environ.get("SAFE4ALL_SHARED_DRIVE", SHARED_KEY_FOLDER)
-    raise FileNotFoundError(
-        f"Could not find {SHARED_KEY_FILENAME} in the shared '{folder}' Google Drive folder. "
-        "Make sure the folder is shared with you (in 'Shared with me', right-click it -> "
-        "Organize -> Add shortcut -> My Drive), or set EE_SERVICE_ACCOUNT_KEY to the key "
-        "file path, or set EE_AUTH = 'personal' to sign in with your own account."
+    return None
+
+
+def _download_shared_key() -> Path | None:
+    """Fallback: download the shared key from its Drive file link (gdown), like TAHMO/NOAA.
+
+    Cached locally so it is fetched only once. Returns the path, or None if the
+    download is not possible (gdown missing or the file unreachable).
+    """
+    import tempfile
+
+    dest = Path(
+        os.environ.get("SAFE4ALL_SA_KEY_CACHE")
+        or Path(tempfile.gettempdir()) / "safe4all_service_key.json"
     )
+    if dest.is_file() and dest.stat().st_size > 0:
+        return dest
+    try:
+        import gdown
+    except ImportError:
+        return None
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        gdown.download(
+            f"https://drive.google.com/uc?id={SHARED_SA_KEY_DRIVE_ID}", str(dest), quiet=True
+        )
+    except Exception:
+        return None
+    return dest if dest.is_file() and dest.stat().st_size > 0 else None
 
 
 def _shared_service_account_credentials(ee):
-    """Return ``(credentials, project_id)`` from the shared workshop key file."""
-    key_path = _shared_key_path()
+    """Return ``(credentials, project_id)`` for the shared workshop service account.
+
+    The key is taken from the shared ``SAFE4ALL-workshop`` Drive folder when it is
+    available, otherwise downloaded from its shared Drive file link.
+    """
+    key_path = _locate_shared_key() or _download_shared_key()
+    if key_path is None:
+        folder = os.environ.get("SAFE4ALL_SHARED_DRIVE", SHARED_KEY_FOLDER)
+        raise FileNotFoundError(
+            f"Could not read {SHARED_KEY_FILENAME} from the shared '{folder}' Google Drive "
+            "folder, and could not download the shared key from its Drive link. Share the "
+            "folder with yourself (in 'Shared with me', right-click it -> Organize -> Add "
+            "shortcut -> My Drive), or set EE_SERVICE_ACCOUNT_KEY to a key file path, or set "
+            "EE_AUTH = 'personal' to sign in with your own account."
+        )
     info = json.loads(key_path.read_text())
     credentials = ee.ServiceAccountCredentials(info["client_email"], str(key_path))
     return credentials, info.get("project_id", SHARED_EE_PROJECT)
@@ -143,7 +183,10 @@ def initialise_earth_engine(project: str | None = None):
     if auth_mode != "personal":
         try:
             credentials, sa_project = _shared_service_account_credentials(ee)
-            ee.Initialize(credentials, project=project or sa_project)
+            # Use the key's own project: a service account only has access to its
+            # own project, so an EE_PROJECT override here would reintroduce the
+            # permission error when the two differ.
+            ee.Initialize(credentials, project=sa_project or project)
             return ee
         except Exception as error:  # pragma: no cover - network/credential issues
             print(

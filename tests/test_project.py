@@ -68,6 +68,38 @@ class ProjectTests(unittest.TestCase):
             fake_ee.ServiceAccountCredentials.return_value, project="natural-notch-435413-j3"
         )
 
+    def test_shared_service_account_falls_back_to_drive_link(self):
+        # If the SAFE4ALL-workshop folder is not shared with the user, the key is
+        # downloaded from its Drive file link (gdown) instead, like TAHMO/NOAA, and
+        # Earth Engine is initialised with the key's own project.
+        fake_ee = mock.MagicMock()
+        fake_gdown = mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            empty_folder = Path(tmp_dir) / "folder"
+            empty_folder.mkdir()
+            cache = Path(tmp_dir) / "downloaded_key.json"
+
+            def _fake_download(url, out, quiet=True):
+                Path(out).write_text(json.dumps({
+                    "client_email": "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com",
+                    "project_id": "natural-notch-435413-j3",
+                }))
+
+            fake_gdown.download.side_effect = _fake_download
+            env = {"SAFE4ALL_SA_KEY_DIR": str(empty_folder), "SAFE4ALL_SA_KEY_CACHE": str(cache)}
+            with mock.patch.dict(os.environ, env, clear=True), \
+                    mock.patch.dict(sys.modules, {"ee": fake_ee, "gdown": fake_gdown}):
+                initialise_earth_engine()
+
+        fake_gdown.download.assert_called_once()
+        fake_ee.ServiceAccountCredentials.assert_called_once_with(
+            "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com", str(cache)
+        )
+        fake_ee.Authenticate.assert_not_called()
+        fake_ee.Initialize.assert_called_once_with(
+            fake_ee.ServiceAccountCredentials.return_value, project="natural-notch-435413-j3"
+        )
+
     def test_earth_engine_uses_a_service_account_key_when_configured(self):
         # Headless/workshop auth path: a service account key file (never
         # committed to the repo) should be used instead of interactive
