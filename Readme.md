@@ -101,8 +101,13 @@ account that has no access to the workshop project.
 `EE_AUTH` in Section 1 selects the mode:
 
 - **`'shared'` (default):** the shared workshop service account is used. Its key
-  is downloaded at run time from Google Drive (via `gdown`), so **no credential
-  is stored in this repository**. Nothing else to configure — just Run all.
+  is read at run time from `service-key.json` in the shared **`SAFE4ALL-workshop`**
+  Google Drive folder, so **no credential is stored in this repository**. In
+  Colab the notebook mounts your Drive and finds the folder whether it is a
+  Shared Drive or a folder shared with you. If it was only shared with you, add
+  it to your Drive first: *Shared with me -> right-click `SAFE4ALL-workshop` ->
+  Organize -> Add shortcut -> My Drive*. Locally, Google Drive for Desktop must
+  be syncing that folder.
 - **`'personal'`:** sign in with your own Google account. Set `EE_PROJECT` to a
   Cloud project where you have enabled the Earth Engine API (free to create at
   <https://console.cloud.google.com/>); the notebook then uses the normal
@@ -114,7 +119,8 @@ JSON key. **Never commit a key file to this repository** — keep it outside the
 project folder, or inside `.safe4all-cache/` (already git-ignored). If the shared
 key is ever misused, rotate it in
 [IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
-and update the Drive key file; only `safe4all/gee.py` references it.
+and replace `service-key.json` in the `SAFE4ALL-workshop` folder; only
+`safe4all/gee.py` references it.
 
 TAHMO API credentials are still requested privately at run time with `getpass`
 and kept only in the current session's memory.

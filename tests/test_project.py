@@ -46,17 +46,17 @@ class ProjectTests(unittest.TestCase):
 
     def test_earth_engine_uses_shared_service_account_by_default(self):
         # Default zero-friction path: with no personal config the notebook signs
-        # in with the shared workshop service account (downloaded from Drive, here
-        # pre-seeded via SAFE4ALL_SA_KEY_CACHE), so participants never hit
+        # in with the shared workshop service account (read from
+        # SAFE4ALL-workshop/service-key.json, here a temp folder via SAFE4ALL_SA_KEY_DIR), so participants never hit
         # PERMISSION_DENIED on a project they do not own.
         fake_ee = mock.MagicMock()
         with tempfile.TemporaryDirectory() as tmp_dir:
-            key_path = Path(tmp_dir) / "shared_sa.json"
+            key_path = Path(tmp_dir) / "service-key.json"
             key_path.write_text(json.dumps({
                 "client_email": "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com",
                 "project_id": "natural-notch-435413-j3",
             }))
-            env = {"SAFE4ALL_SA_KEY_CACHE": str(key_path)}
+            env = {"SAFE4ALL_SA_KEY_DIR": tmp_dir}
             with mock.patch.dict(os.environ, env, clear=True), mock.patch.dict(sys.modules, {"ee": fake_ee}):
                 initialise_earth_engine()
 
