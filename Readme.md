@@ -121,9 +121,25 @@ treat it as compromised and rotate it immediately in
 [IAM & Admin -> Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts),
 then replace `service-key.json` in the `SAFE4ALL-workshop` folder.
 
-The project does not store credentials or API keys in code — TAHMO
-credentials are requested privately at runtime with `getpass` and kept only
-in the current session's memory.
+## TAHMO API credentials
+
+The notebook reads the TAHMO API key and secret from **`tahmo-credentials.txt`**
+in the same shared `SAFE4ALL-workshop` Google Drive folder, so participants are
+not asked to type them. Create the file with exactly these two lines:
+
+```text
+TAHMO_API_KEY=your-api-key
+TAHMO_API_SECRET=your-api-secret
+```
+
+Blank lines and `#` comments are ignored. If `TAHMO_API_KEY` and
+`TAHMO_API_SECRET` are already set as environment variables, they are used
+instead. If neither is available, TAHMO is skipped and the risk assessment still
+runs.
+
+The project does not store credentials or API keys in code. Never commit
+`tahmo-credentials.txt` or `service-key.json` to this repository, and share the
+Drive folder only with workshop participants.
 
 ## Interpretation note
 

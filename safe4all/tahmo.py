@@ -1,4 +1,9 @@
-"""Minimal, credential-free-on-disk access to TAHMO precipitation data."""
+"""Minimal access to TAHMO precipitation data.
+
+Credentials are never stored in this repository. They come from environment
+variables or from ``tahmo-credentials.txt`` in the shared SAFE4ALL-workshop
+Google Drive folder.
+"""
 
 from __future__ import annotations
 
@@ -19,7 +24,8 @@ def credentials() -> tuple[str, str]:
     secret = os.environ.get("TAHMO_API_SECRET")
     if not key or not secret:
         raise RuntimeError(
-            "Set TAHMO_API_KEY and TAHMO_API_SECRET in the notebook environment before fetching live station data."
+            "TAHMO credentials not found. Put tahmo-credentials.txt in the shared SAFE4ALL-workshop "
+            "Drive folder, or set TAHMO_API_KEY and TAHMO_API_SECRET."
         )
     return key, secret
 

@@ -93,6 +93,28 @@ class ProjectTests(unittest.TestCase):
         fake_ee.ServiceAccountCredentials.assert_not_called()
         fake_ee.Initialize.assert_called_once_with(project="safe4all-514410")
 
+    def test_tahmo_credentials_are_read_from_the_shared_drive_file(self):
+        from safe4all.tahmo_credentials import load_shared_credentials
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            (Path(tmp_dir) / "tahmo-credentials.txt").write_text(
+                "# TAHMO workshop account\nTAHMO_API_KEY = abc123\n\nTAHMO_API_SECRET='s3cret=x'\n"
+            )
+            with mock.patch.dict(os.environ, {"SAFE4ALL_SA_KEY_DIR": tmp_dir}, clear=True):
+                self.assertTrue(load_shared_credentials())
+                self.assertEqual(os.environ["TAHMO_API_KEY"], "abc123")
+                self.assertEqual(os.environ["TAHMO_API_SECRET"], "s3cret=x")
+
+    def test_tahmo_credentials_missing_or_incomplete(self):
+        from safe4all.tahmo_credentials import load_shared_credentials
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with mock.patch.dict(os.environ, {"SAFE4ALL_SA_KEY_DIR": tmp_dir}, clear=True):
+                self.assertFalse(load_shared_credentials())
+                (Path(tmp_dir) / "tahmo-credentials.txt").write_text("TAHMO_API_KEY=abc123\n")
+                with self.assertRaisesRegex(ValueError, "TAHMO_API_SECRET"):
+                    load_shared_credentials()
+
     def test_earth_engine_service_account_key_must_exist(self):
         env = {"EE_PROJECT": "some-project", "EE_SERVICE_ACCOUNT_KEY": "/no/such/key.json"}
         with mock.patch.dict(os.environ, env, clear=True), mock.patch.dict(sys.modules, {"ee": mock.MagicMock()}):

@@ -4,3 +4,5 @@ __pycache__/
 .env
 *credentials*.json
 tahmo_config.json
+service-key.json
+tahmo-credentials.txt
