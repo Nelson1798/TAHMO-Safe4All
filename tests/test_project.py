@@ -36,13 +36,37 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(metrics['n'], 3.0)
         self.assertGreater(metrics['rmse_mm'], 0)
 
-    def test_earth_engine_requires_a_project(self):
-        # Earth Engine has required every request to name a Cloud project
-        # since November 2024; fail fast with a clear message instead of a
-        # cryptic error from the `ee` library.
-        with mock.patch.dict(os.environ, {}, clear=True):
+    def test_personal_auth_requires_a_project(self):
+        # With SAFE4ALL_EE_AUTH=personal the notebook signs in with the user's
+        # own account, so it needs an explicit Cloud project; fail fast with a
+        # clear message instead of a cryptic error from the `ee` library.
+        with mock.patch.dict(os.environ, {"SAFE4ALL_EE_AUTH": "personal"}, clear=True):
             with self.assertRaisesRegex(RuntimeError, "EE_PROJECT"):
                 initialise_earth_engine()
+
+    def test_earth_engine_uses_shared_service_account_by_default(self):
+        # Default zero-friction path: with no personal config the notebook signs
+        # in with the shared workshop service account (downloaded from Drive, here
+        # pre-seeded via SAFE4ALL_SA_KEY_CACHE), so participants never hit
+        # PERMISSION_DENIED on a project they do not own.
+        fake_ee = mock.MagicMock()
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            key_path = Path(tmp_dir) / "shared_sa.json"
+            key_path.write_text(json.dumps({
+                "client_email": "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com",
+                "project_id": "natural-notch-435413-j3",
+            }))
+            env = {"SAFE4ALL_SA_KEY_CACHE": str(key_path)}
+            with mock.patch.dict(os.environ, env, clear=True), mock.patch.dict(sys.modules, {"ee": fake_ee}):
+                initialise_earth_engine()
+
+        fake_ee.ServiceAccountCredentials.assert_called_once_with(
+            "gee-notebook-user@natural-notch-435413-j3.iam.gserviceaccount.com", str(key_path)
+        )
+        fake_ee.Authenticate.assert_not_called()
+        fake_ee.Initialize.assert_called_once_with(
+            fake_ee.ServiceAccountCredentials.return_value, project="natural-notch-435413-j3"
+        )
 
     def test_earth_engine_uses_a_service_account_key_when_configured(self):
         # Headless/workshop auth path: a service account key file (never
